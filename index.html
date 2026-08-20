@@ -1494,44 +1494,67 @@ function renderListModalContent(l){
     </div>
   `;
 
+  // A realtime sync (including the echo of this client's own save) can swap
+  // out the global `data` object while this modal is still open. Handlers
+  // below re-resolve the list from the live `data.lists` by id on every
+  // interaction instead of trusting the closured `l`, so an edit never gets
+  // applied to an orphaned copy and silently lost.
+  const listId = l.id;
+  function currentList(){
+    return data.lists.find(x=>x.id===listId);
+  }
+
   document.getElementById('list-modal-close-btn').addEventListener('click', closeListModal);
   document.getElementById('list-modal-title-input').addEventListener('change', e=>{
+    const cur = currentList();
+    if(!cur) return closeListModal();
     const val = e.target.value.trim();
-    if(val){ l.name = val; saveData(); renderListsBoard(); }
-    else e.target.value = l.name;
+    if(val){ cur.name = val; saveData(); renderListsBoard(); }
+    else e.target.value = cur.name;
   });
   document.getElementById('list-modal-add-form').addEventListener('submit', e=>{
     e.preventDefault();
+    const cur = currentList();
+    if(!cur) return closeListModal();
     const nameInput = document.getElementById('list-modal-item-name');
     const name = nameInput.value.trim();
     if(!name) return;
     const qty = parseInt(document.getElementById('list-modal-item-qty').value) || 1;
-    l.items.unshift({id: uid('item'), name, qty, checked:false});
+    cur.items.unshift({id: uid('item'), name, qty, checked:false});
     saveData();
-    renderListModalContent(l);
+    renderListModalContent(cur);
     renderListsBoard();
     document.getElementById('list-modal-item-name').focus();
   });
   content.querySelectorAll('.item-check').forEach(cb=>{
     cb.addEventListener('change', e=>{
+      const cur = currentList();
+      if(!cur) return closeListModal();
       const row = e.target.closest('.item-row');
-      const it = l.items.find(i=>i.id===row.dataset.itemId);
+      const it = cur.items.find(i=>i.id===row.dataset.itemId);
+      if(!it) return;
       it.checked = e.target.checked;
-      saveData(); renderListModalContent(l); renderListsBoard();
+      saveData(); renderListModalContent(cur); renderListsBoard();
     });
   });
   content.querySelectorAll('[data-del-item]').forEach(btn=>{
     btn.addEventListener('click', ()=>{
-      l.items = l.items.filter(i=>i.id!==btn.dataset.delItem);
-      saveData(); renderListModalContent(l); renderListsBoard();
+      const cur = currentList();
+      if(!cur) return closeListModal();
+      cur.items = cur.items.filter(i=>i.id!==btn.dataset.delItem);
+      saveData(); renderListModalContent(cur); renderListsBoard();
     });
   });
   document.getElementById('list-modal-clear-btn').addEventListener('click', ()=>{
-    l.items = l.items.filter(i=>!i.checked);
-    saveData(); renderListModalContent(l); renderListsBoard();
+    const cur = currentList();
+    if(!cur) return closeListModal();
+    cur.items = cur.items.filter(i=>!i.checked);
+    saveData(); renderListModalContent(cur); renderListsBoard();
   });
   document.getElementById('list-modal-closelist-btn').addEventListener('click', ()=>{
-    l.closed = true;
+    const cur = currentList();
+    if(!cur) return closeListModal();
+    cur.closed = true;
     saveData(); renderListsBoard(); closeListModal();
   });
 }
