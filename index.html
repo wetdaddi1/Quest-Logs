@@ -660,7 +660,7 @@ textarea{resize:vertical; min-height:44px;}
 </head>
 <body>
 
-<div class="modal-overlay" id="auth-overlay">
+<div class="modal-overlay hidden" id="auth-overlay">
   <div class="modal-card" style="max-width:360px; text-align:left;">
     <div class="auth-logo">⚔</div>
     <div class="auth-title" id="auth-title">Sign in to Hearthkeep</div>
@@ -1039,15 +1039,24 @@ function escapeHtml(s){
 }
 
 /* ---------------- Tabs ---------------- */
+const ACTIVE_TAB_KEY = 'hearthkeep-active-tab';
+const TAB_NAMES = ['quests', 'lists', 'reminders'];
+
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.getElementById('quests-tab').classList.toggle('hidden', tab!=='quests');
+  document.getElementById('lists-tab').classList.toggle('hidden', tab!=='lists');
+  document.getElementById('reminders-tab').classList.toggle('hidden', tab!=='reminders');
+  localStorage.setItem(ACTIVE_TAB_KEY, tab);
+}
+
+function restoreActiveTab(){
+  const saved = localStorage.getItem(ACTIVE_TAB_KEY);
+  switchTab(TAB_NAMES.includes(saved) ? saved : 'quests');
+}
+
 document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    const tab = btn.dataset.tab;
-    document.getElementById('quests-tab').classList.toggle('hidden', tab!=='quests');
-    document.getElementById('lists-tab').classList.toggle('hidden', tab!=='lists');
-    document.getElementById('reminders-tab').classList.toggle('hidden', tab!=='reminders');
-  });
+  btn.addEventListener('click', ()=> switchTab(btn.dataset.tab));
 });
 
 /* ---------------- Quest form ---------------- */
@@ -1850,6 +1859,7 @@ async function onSignedIn(){
   if(!session) return;
   myProfile = await ensureProfile(session.user);
   hideAuthOverlay();
+  restoreActiveTab();
   renderAccountBar();
   await loadData();
   subscribeRealtime();
