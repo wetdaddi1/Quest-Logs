@@ -1052,12 +1052,46 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
 /* ---------------- Quest form ---------------- */
 const questForm = document.getElementById('quest-form');
+let editingQuestId = null;
+
+function setQuestFormMode(editing){
+  questForm.querySelector('button[type=submit]').textContent = editing ? 'Save Changes' : 'Post Quest';
+}
+
+function resetQuestFormToCreateMode(){
+  editingQuestId = null;
+  questForm.reset();
+  document.querySelectorAll('#qf-difficulty .chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('#qf-difficulty .chip[data-diff=silver]').classList.add('active');
+  document.querySelectorAll('#qf-type .chip').forEach(c=>c.classList.remove('active'));
+  document.querySelector('#qf-type .chip[data-type=side]').classList.add('active');
+  renderAssigneeChips();
+  setQuestFormMode(false);
+}
+
+function openQuestFormForEdit(q){
+  editingQuestId = q.id;
+  document.getElementById('qf-title').value = q.title;
+  document.getElementById('qf-desc').value = q.desc || '';
+  document.getElementById('qf-category').value = q.category || '';
+  document.getElementById('qf-recurring').value = q.recurring || 'none';
+  document.getElementById('qf-due').value = q.dueAt ? isoDateFromTs(q.dueAt) : '';
+  document.querySelectorAll('#qf-difficulty .chip').forEach(c=>c.classList.toggle('active', c.dataset.diff===q.difficulty));
+  document.querySelectorAll('#qf-type .chip').forEach(c=>c.classList.toggle('active', c.dataset.type===q.type));
+  renderAssigneeChips(q.assignee);
+  setQuestFormMode(true);
+  questForm.classList.remove('hidden');
+  questForm.scrollIntoView({behavior:'smooth', block:'start'});
+  document.getElementById('qf-title').focus();
+}
+
 document.getElementById('show-quest-form').addEventListener('click', ()=>{
+  resetQuestFormToCreateMode();
   questForm.classList.remove('hidden');
   document.getElementById('qf-title').focus();
 });
 document.getElementById('cancel-quest-form').addEventListener('click', ()=>{
-  questForm.reset();
+  resetQuestFormToCreateMode();
   questForm.classList.add('hidden');
 });
 
@@ -1085,14 +1119,14 @@ document.getElementById('quest-filter').addEventListener('click', e=>{
   renderQuests();
 });
 
-function renderAssigneeChips(){
+function renderAssigneeChips(selectedId){
   const wrap = document.getElementById('qf-assignee');
-  const prevSelected = wrap.querySelector('.chip.active')?.dataset.assignee;
+  const current = selectedId !== undefined ? selectedId : wrap.querySelector('.chip.active')?.dataset.assignee;
   wrap.innerHTML = '';
   const opts = [...data.players.map(p=>({id:p.id, label:p.name})), {id:'both', label:'Both of us'}, {id:'', label:'Unassigned'}];
   opts.forEach((o,i)=>{
     const chip = document.createElement('div');
-    chip.className = 'chip assignee' + ((prevSelected? prevSelected===o.id : i===2) ? ' active':'');
+    chip.className = 'chip assignee' + ((current!==undefined ? current===o.id : i===2) ? ' active':'');
     chip.dataset.assignee = o.id;
     chip.textContent = o.label;
     wrap.appendChild(chip);
@@ -1131,24 +1165,24 @@ questForm.addEventListener('submit', e=>{
   const assignee = document.querySelector('#qf-assignee .chip.active')?.dataset.assignee || '';
   const type = document.querySelector('#qf-type .chip.active')?.dataset.type || 'side';
 
-  data.quests.unshift({
-    id: uid('q'),
-    title, desc, category, recurring, dueAt,
-    difficulty: diff,
-    type,
-    assignee,
-    status: 'available',
-    createdAt: Date.now(),
-    completedAt: null
-  });
+  if(editingQuestId){
+    const q = data.quests.find(x=>x.id===editingQuestId);
+    if(q) Object.assign(q, {title, desc, category, recurring, dueAt, difficulty: diff, type, assignee});
+  }else{
+    data.quests.unshift({
+      id: uid('q'),
+      title, desc, category, recurring, dueAt,
+      difficulty: diff,
+      type,
+      assignee,
+      status: 'available',
+      createdAt: Date.now(),
+      completedAt: null
+    });
+  }
   saveData();
   renderQuests();
-  questForm.reset();
-  document.querySelectorAll('#qf-difficulty .chip').forEach(c=>c.classList.remove('active'));
-  document.querySelector('#qf-difficulty .chip[data-diff=silver]').classList.add('active');
-  document.querySelectorAll('#qf-type .chip').forEach(c=>c.classList.remove('active'));
-  document.querySelector('#qf-type .chip[data-type=side]').classList.add('active');
-  renderAssigneeChips();
+  resetQuestFormToCreateMode();
   questForm.classList.add('hidden');
 });
 
@@ -1166,6 +1200,13 @@ function formatQuestDueDate(ts){
     ? {month:'short', day:'numeric', year:'numeric'}
     : {month:'short', day:'numeric'};
   return d.toLocaleDateString(undefined, opts);
+}
+
+function isoDateFromTs(ts){
+  const d = new Date(ts);
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 function questCardHtml(q){
@@ -1244,6 +1285,7 @@ function openQuestModal(id){
   const isMain = q.type==='main';
   const content = document.getElementById('quest-modal-content');
   content.innerHTML = `
+    <button class="modal-close" id="modal-edit-btn" aria-label="Edit quest" style="right:50px;">${PENCIL_SVG}</button>
     <button class="modal-close" id="modal-close-btn" aria-label="Close">${CLOSE_SVG}</button>
     ${isMain ? `<div class="main-medal" style="position:static; display:inline-flex;"><span class="bang">!</span>Main Quest</div>` : '<span class="side-badge">? Side Quest</span>'}
     <div class="modal-title">${escapeHtml(q.title)}</div>
@@ -1273,6 +1315,10 @@ function openQuestModal(id){
     });
   });
   document.getElementById('modal-close-btn').addEventListener('click', closeQuestModal);
+  document.getElementById('modal-edit-btn').addEventListener('click', ()=>{
+    closeQuestModal();
+    openQuestFormForEdit(q);
+  });
   document.getElementById('quest-modal-overlay').classList.remove('hidden');
 }
 function closeQuestModal(){
