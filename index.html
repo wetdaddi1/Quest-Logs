@@ -579,6 +579,52 @@ textarea{resize:vertical; min-height:44px;}
 .account-bar button:hover{color:var(--gold-1);}
 .account-bar .dot{opacity:.4;}
 
+/* ================= UPKEEP ================= */
+.hk-sub-desc{font-size:.78rem; color:var(--text-faint); font-style:italic; margin:-10px 0 16px;}
+
+.chamber-status{font-size:.68rem; font-family:'JetBrains Mono',monospace;}
+.chamber-status.fresh{color:var(--teal);}
+.chamber-status.soon{color:var(--gold-1);}
+.chamber-status.overdue{color:var(--crimson);}
+
+.modal-list-footer .duty-count{font-size:.7rem; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
+
+.duty-row{
+  padding:11px 4px; border-bottom:1px solid rgba(42,29,5,.15);
+  display:flex; align-items:center; gap:12px;
+}
+.duty-row:last-child{border-bottom:none;}
+.duty-main{flex:1; min-width:0;}
+.duty-name-row{display:flex; align-items:center; gap:8px; margin-bottom:5px; flex-wrap:wrap;}
+.duty-name{font-size:.86rem; font-weight:600; color:var(--ink);}
+.effort-tag{
+  font-family:'Cinzel',serif; font-weight:700; font-size:.6rem; padding:2px 8px; border-radius:10px;
+  text-transform:uppercase; letter-spacing:.03em; border:1px solid; white-space:nowrap;
+}
+.effort-light{background:rgba(52,160,133,.12); color:var(--teal-deep); border-color:rgba(52,160,133,.4);}
+.effort-moderate{background:rgba(217,172,61,.14); color:var(--gold-3); border-color:rgba(217,172,61,.4);}
+.effort-heavy{background:rgba(165,72,201,.12); color:var(--legendary-2); border-color:rgba(165,72,201,.4);}
+.duty-freq{font-size:.68rem; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; margin-bottom:6px;}
+.meter-track{
+  height:7px; border-radius:4px; background:rgba(42,29,5,.08); border:1px solid rgba(42,29,5,.18);
+  overflow:hidden; max-width:260px;
+}
+.meter-fill{height:100%; border-radius:4px; transition:width .4s ease;}
+.duty-side{display:flex; flex-direction:column; align-items:flex-end; gap:6px; flex-shrink:0;}
+.duty-xp{font-size:.66rem; color:var(--ink-soft); font-family:'JetBrains Mono',monospace;}
+.duty-side-actions{display:flex; gap:5px; align-items:center;}
+.mark-done-btn{
+  font-family:'Cinzel',serif; font-weight:700; font-size:.66rem; padding:6px 11px; border-radius:5px;
+  background:linear-gradient(180deg,var(--gold-1),var(--gold-2)); border:1px solid var(--gold-3); color:#241a06; cursor:pointer;
+}
+.mark-done-btn:hover{filter:brightness(1.05);}
+.duty-del-btn{
+  background:none; border:none; color:var(--crimson-deep); cursor:pointer; padding:4px; opacity:.6;
+  display:flex; align-items:center; justify-content:center;
+}
+.duty-del-btn:hover{opacity:1;}
+.duty-del-btn .icon{width:13px; height:13px;}
+
 /* ================= MODAL ================= */
 .modal-overlay{
   position:fixed; inset:0; background:rgba(5,3,10,.72); backdrop-filter:blur(2px);
@@ -716,6 +762,10 @@ textarea{resize:vertical; min-height:44px;}
     <button class="tab-btn" data-tab="reminders">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       Reminders
+    </button>
+    <button class="tab-btn" data-tab="upkeep">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
+      Upkeep
     </button>
   </div>
 
@@ -860,6 +910,16 @@ textarea{resize:vertical; min-height:44px;}
         <div class="archive-list hidden" id="archive-list"></div>
       </div>
     </section>
+
+    <section id="upkeep-tab" class="hidden">
+      <div class="supply-header">
+        <h2 class="section-title">Upkeep</h2>
+        <button class="btn" id="new-chamber-btn">+ Add Chamber</button>
+      </div>
+      <div class="hk-sub-desc">Room-by-room care, tracked by how overdue it is — not fixed dates. No assignments — either of you can claim any duty.</div>
+
+      <div class="lists-board" id="chambers-board"></div>
+    </section>
   </main>
 </div>
 
@@ -871,6 +931,21 @@ textarea{resize:vertical; min-height:44px;}
 
 <div class="modal-overlay hidden" id="list-modal-overlay">
   <div class="modal-card" id="list-modal-content" style="max-width:460px;"></div>
+</div>
+
+<div class="modal-overlay hidden" id="chamber-modal-overlay">
+  <div class="modal-card" id="chamber-modal-content" style="max-width:480px;"></div>
+</div>
+
+<div class="modal-overlay hidden" id="new-chamber-modal-overlay">
+  <div class="modal-card" style="max-width:360px;">
+    <button class="modal-close" id="new-chamber-modal-close" aria-label="Close">✕</button>
+    <div class="modal-title">Add a chamber</div>
+    <form id="new-chamber-form" style="margin-top:14px; display:flex; flex-direction:column; gap:12px;">
+      <input type="text" id="new-chamber-input" placeholder="e.g. Kitchen, Bathroom, Bedroom" required>
+      <button type="submit" class="btn">Create chamber</button>
+    </form>
+  </div>
 </div>
 
 <div class="modal-overlay hidden" id="new-list-modal-overlay">
@@ -912,6 +987,10 @@ const SCROLL_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="cu
 const PLUS_SVG = '<svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
 const REOPEN_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 16v-4h4"/></svg>';
 const TRASH_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/></svg>';
+const DOOR_SVG = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="1"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/></svg>';
+
+const EFFORT_XP = {light:10, moderate:25, heavy:50};
+const EFFORT_COLOR = {light:'#5dcaa5', moderate:'#d9ac3d', heavy:'#a548c9'};
 
 function defaultData(){
   return {
@@ -921,6 +1000,7 @@ function defaultData(){
     ],
     reminders: [],
     quests: [],
+    chambers: [],
     lists: [
       {id:'list-groceries', name:'Groceries', closed:false, items:[]}
     ],
@@ -963,6 +1043,7 @@ async function loadData(){
     data = defaultData();
   }
   if(!data.players) data = defaultData();
+  if(!data.chambers) data.chambers = [];
   render();
 }
 async function saveData(){
@@ -1040,13 +1121,14 @@ function escapeHtml(s){
 
 /* ---------------- Tabs ---------------- */
 const ACTIVE_TAB_KEY = 'hearthkeep-active-tab';
-const TAB_NAMES = ['quests', 'lists', 'reminders'];
+const TAB_NAMES = ['quests', 'lists', 'reminders', 'upkeep'];
 
 function switchTab(tab){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.getElementById('quests-tab').classList.toggle('hidden', tab!=='quests');
   document.getElementById('lists-tab').classList.toggle('hidden', tab!=='lists');
   document.getElementById('reminders-tab').classList.toggle('hidden', tab!=='reminders');
+  document.getElementById('upkeep-tab').classList.toggle('hidden', tab!=='upkeep');
   localStorage.setItem(ACTIVE_TAB_KEY, tab);
 }
 
@@ -1754,6 +1836,215 @@ reminderForm.addEventListener('submit', e=>{
 
 setInterval(renderReminders, 60000);
 
+/* ---------------- Upkeep (chambers & duties) ---------------- */
+function neglectInfo(duty){
+  if(!duty.lastDoneAt){
+    return {ratio: 1.3, overdue: true, label: 'Never done'};
+  }
+  const elapsedDays = (Date.now() - duty.lastDoneAt) / 86400000;
+  const ratio = elapsedDays / duty.frequencyDays;
+  const overdue = ratio >= 1;
+  let label;
+  if(overdue){
+    const overdueDays = Math.max(1, Math.round((elapsedDays - duty.frequencyDays)));
+    label = `${overdueDays} day${overdueDays!==1?'s':''} overdue`;
+  }else{
+    const remainingDays = Math.max(0, Math.round(duty.frequencyDays - elapsedDays));
+    label = remainingDays===0 ? 'Due today' : `Due in ${remainingDays} day${remainingDays!==1?'s':''}`;
+  }
+  return {ratio, overdue, label};
+}
+function neglectColor(ratio){
+  if(ratio >= 1) return '#e24b4a';
+  if(ratio >= 0.6) return '#d9ac3d';
+  return '#34a085';
+}
+function chamberSummary(chamber){
+  const duties = chamber.duties || [];
+  if(duties.length === 0) return {label:'No duties yet', cls:'fresh'};
+  let overdueCount = 0, soonCount = 0;
+  duties.forEach(d=>{
+    const info = neglectInfo(d);
+    if(info.overdue) overdueCount++;
+    else if(info.ratio >= 0.6) soonCount++;
+  });
+  if(overdueCount>0) return {label:`${overdueCount} overdue`, cls:'overdue'};
+  if(soonCount>0) return {label:`${soonCount} due soon`, cls:'soon'};
+  return {label:'All fresh', cls:'fresh'};
+}
+
+function chamberSummaryCardHtml(c){
+  const summary = chamberSummary(c);
+  return `
+    <div class="list-summary-card" data-chamber-id="${c.id}">
+      <button class="list-card-close" data-close-chamber="${c.id}" title="Delete chamber" aria-label="Delete chamber">${CLOSE_SVG}</button>
+      <div class="list-summary-icon">${DOOR_SVG}</div>
+      <div class="list-summary-name">${escapeHtml(c.name)}</div>
+      <div class="chamber-status ${summary.cls}">${summary.label}</div>
+    </div>
+  `;
+}
+
+function renderChambersBoard(){
+  const board = document.getElementById('chambers-board');
+  if(!board) return;
+  const chambers = data.chambers || [];
+  board.innerHTML = chambers.length
+    ? chambers.map(chamberSummaryCardHtml).join('')
+    : `<div class="empty-state-small" style="grid-column:1/-1;">No chambers yet. Use + Add Chamber above to start one.</div>`;
+
+  board.querySelectorAll('.list-summary-card').forEach(card=>{
+    card.addEventListener('click', e=>{
+      if(e.target.closest('[data-close-chamber]')) return;
+      openChamberModal(card.dataset.chamberId);
+    });
+  });
+  board.querySelectorAll('[data-close-chamber]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      if(!confirm('Delete this chamber and all its duties? This cannot be undone.')) return;
+      data.chambers = data.chambers.filter(c=>c.id!==btn.dataset.closeChamber);
+      saveData(); renderChambersBoard();
+    });
+  });
+}
+
+function dutyRowHtml(duty){
+  const info = neglectInfo(duty);
+  const color = neglectColor(info.ratio);
+  const widthPct = Math.min(100, Math.round(info.ratio*100));
+  const lastDoneText = duty.lastDoneAt ? `last done ${formatQuestDueDate(duty.lastDoneAt)}` : 'never done';
+  return `
+    <div class="duty-row" data-duty-id="${duty.id}">
+      <div class="duty-main">
+        <div class="duty-name-row">
+          <span class="duty-name">${escapeHtml(duty.name)}</span>
+          <span class="effort-tag effort-${duty.effort}">${duty.effort}</span>
+        </div>
+        <div class="duty-freq">Every ${duty.frequencyDays} day${duty.frequencyDays!==1?'s':''} · ${lastDoneText} · ${info.label}</div>
+        <div class="meter-track"><div class="meter-fill" style="width:${widthPct}%; background:${color};"></div></div>
+      </div>
+      <div class="duty-side">
+        <span class="duty-xp">+${EFFORT_XP[duty.effort]} XP</span>
+        <div class="duty-side-actions">
+          <button class="mark-done-btn" data-mark-duty="${duty.id}">Mark done</button>
+          <button class="duty-del-btn" data-del-duty="${duty.id}" title="Delete duty" aria-label="Delete duty">${CLOSE_SVG}</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openChamberModal(id){
+  const c = data.chambers.find(x=>x.id===id);
+  if(!c) return;
+  renderChamberModalContent(c);
+  document.getElementById('chamber-modal-overlay').classList.remove('hidden');
+}
+function closeChamberModal(){
+  document.getElementById('chamber-modal-overlay').classList.add('hidden');
+}
+document.getElementById('chamber-modal-overlay').addEventListener('click', e=>{
+  if(e.target.id === 'chamber-modal-overlay') closeChamberModal();
+});
+
+function renderChamberModalContent(c){
+  const duties = c.duties || [];
+  const dutiesHtml = duties.length
+    ? duties.map(dutyRowHtml).join('')
+    : `<div class="empty-state-small">No duties yet. Add one below.</div>`;
+
+  const content = document.getElementById('chamber-modal-content');
+  content.innerHTML = `
+    <button class="modal-close" id="chamber-modal-close-btn" aria-label="Close">${CLOSE_SVG}</button>
+    <input class="modal-list-title" id="chamber-modal-title-input" value="${escapeAttr(c.name)}" aria-label="Chamber name">
+    <div class="modal-list-progress">${duties.length} duty${duties.length!==1?'ies':'y'}</div>
+    <form class="list-add-form" id="chamber-add-duty-form" style="margin-top:14px;">
+      <input type="text" class="li-name" id="duty-name-input" placeholder="Add a duty..." required>
+      <select id="duty-effort-input" style="flex:0 0 118px;">
+        <option value="light">Light · 10 XP</option>
+        <option value="moderate" selected>Moderate · 25 XP</option>
+        <option value="heavy">Heavy · 50 XP</option>
+      </select>
+      <input type="number" id="duty-freq-input" class="li-qty" min="1" value="7" title="Days between" style="flex:0 0 60px;">
+      <button type="submit" class="list-add-btn" aria-label="Add duty">${PLUS_SVG}</button>
+    </form>
+    <div class="list-card-items items-on-parchment" style="max-height:320px; margin-top:12px;">${dutiesHtml}</div>
+  `;
+
+  document.getElementById('chamber-modal-close-btn').addEventListener('click', closeChamberModal);
+  document.getElementById('chamber-modal-title-input').addEventListener('change', e=>{
+    const val = e.target.value.trim();
+    if(val){ c.name = val; saveData(); renderChambersBoard(); }
+    else e.target.value = c.name;
+  });
+  document.getElementById('chamber-add-duty-form').addEventListener('submit', e=>{
+    e.preventDefault();
+    const nameInput = document.getElementById('duty-name-input');
+    const name = nameInput.value.trim();
+    if(!name) return;
+    const effort = document.getElementById('duty-effort-input').value;
+    const frequencyDays = Math.max(1, parseInt(document.getElementById('duty-freq-input').value) || 7);
+    c.duties = c.duties || [];
+    c.duties.unshift({id: uid('duty'), name, effort, frequencyDays, lastDoneAt: null, createdAt: Date.now()});
+    saveData();
+    renderChamberModalContent(c);
+    renderChambersBoard();
+    document.getElementById('duty-name-input').focus();
+  });
+  content.querySelectorAll('[data-mark-duty]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const duty = c.duties.find(d=>d.id===btn.dataset.markDuty);
+      if(!duty) return;
+      duty.lastDoneAt = Date.now();
+      if(myProfile && myProfile.player_slot){
+        awardXp(myProfile.player_slot, EFFORT_XP[duty.effort]);
+      }
+      saveData();
+      renderChamberModalContent(c);
+      renderChambersBoard();
+      showToast(`${CHECK_SVG} "${duty.name}" done (+${EFFORT_XP[duty.effort]} XP)`);
+    });
+  });
+  content.querySelectorAll('[data-del-duty]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      c.duties = c.duties.filter(d=>d.id!==btn.dataset.delDuty);
+      saveData();
+      renderChamberModalContent(c);
+      renderChambersBoard();
+    });
+  });
+}
+
+document.getElementById('new-chamber-btn').addEventListener('click', openNewChamberModal);
+document.getElementById('new-chamber-modal-close').addEventListener('click', closeNewChamberModal);
+document.getElementById('new-chamber-modal-overlay').addEventListener('click', e=>{
+  if(e.target.id === 'new-chamber-modal-overlay') closeNewChamberModal();
+});
+document.getElementById('new-chamber-form').addEventListener('submit', e=>{
+  e.preventDefault();
+  const input = document.getElementById('new-chamber-input');
+  const name = input.value.trim();
+  if(!name) return;
+  const c = {id: uid('chamber'), name, duties: []};
+  data.chambers = data.chambers || [];
+  data.chambers.push(c);
+  saveData();
+  closeNewChamberModal();
+  renderChambersBoard();
+  openChamberModal(c.id);
+});
+function openNewChamberModal(){
+  document.getElementById('new-chamber-input').value = '';
+  document.getElementById('new-chamber-modal-overlay').classList.remove('hidden');
+  document.getElementById('new-chamber-input').focus();
+}
+function closeNewChamberModal(){
+  document.getElementById('new-chamber-modal-overlay').classList.add('hidden');
+}
+
+setInterval(()=>{ if(data && data.chambers) renderChambersBoard(); }, 60000);
+
 /* ---------------- Init ---------------- */
 function render(){
   renderParty();
@@ -1762,6 +2053,7 @@ function render(){
   renderListsBoard();
   renderReminderAssigneeChips();
   renderReminders();
+  renderChambersBoard();
 }
 
 /* ---------------- Auth ---------------- */
